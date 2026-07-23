@@ -551,18 +551,15 @@ class GrowwMFChatbot:
         query_clean = _clean(query)
 
         system_prompt = (
-            "You answer factual questions about Groww Mutual Fund schemes. "
-            "Rules:\n"
-            "1. Answer in 1 to 3 sentences only.\n"
-            "2. State the specific value asked for (e.g. 'The expense ratio is 2.42%').\n"
-            "3. Do NOT repeat the context. Do NOT include source URLs.\n"
-            "4. If the answer is not in the context, say: I couldn't find this in the available public sources.\n"
-            f"5. End every answer with this exact line: Last updated from sources: {today}"
+            "Answer the question directly. Do NOT show your reasoning or thought process. "
+            "Do NOT mention 'according to context' or 'source says'. "
+            "Just state the fact in 1-3 sentences. "
+            f"End with: Last updated from sources: {today}"
         )
         user_prompt = (
             f"Question: {query_clean}\n\n"
             f"Context:\n{context}\n\n"
-            f"Answer:"
+            f"Give the direct answer (no reasoning):"
         )
 
         answer = _call_zai_chat(system_prompt, user_prompt, timeout=10)
