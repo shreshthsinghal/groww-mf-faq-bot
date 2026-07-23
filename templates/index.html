@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Groww MF Facts — sourced answers, no advice</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ============ HEADER ============ -->
+    <header class="header">
+      <img src="/static/logo.svg" alt="" class="header__logo" aria-hidden="true">
+      <div class="header__title">Groww MF <em>Facts</em></div>
+      <div class="header__spacer"></div>
+      <div class="header__meta">v1.0 · reference tool</div>
+    </header>
+
+    <!-- ============ INTRO (empty state) ============ -->
+    <section class="intro" id="intro">
+      <p class="intro__lede">
+        A reference tool for factual questions about Groww Mutual Fund schemes —
+        expense ratio, exit load, minimum SIP, lock-in, riskometer, benchmark, and statement downloads.
+      </p>
+      <p class="intro__sub">
+        Every answer is taken from an official public source (AMC, SEBI, AMFI) and cites that source.
+        No performance figures, no comparisons of returns, no buy/sell advice.
+      </p>
+    </section>
+
+    <!-- ============ FINITE MENU ============ -->
+    <section class="menu" id="menu">
+      <div class="menu__group">
+        <div class="menu__group-label">Fact types — tap to ask</div>
+        <div class="menu__chips">
+          <button class="chip" data-q="What is the expense ratio of Groww Large Cap Fund?">Expense ratio</button>
+          <button class="chip" data-q="What is the exit load of Groww ELSS Tax Saver Fund?">Exit load</button>
+          <button class="chip" data-q="What is the minimum SIP for Groww Liquid Fund?">Minimum SIP</button>
+          <button class="chip" data-q="What is the lock-in period of Groww ELSS Tax Saver Fund?">ELSS lock-in</button>
+          <button class="chip" data-q="What is the riskometer of Groww Small Cap Fund?">Riskometer</button>
+          <button class="chip" data-q="What is the benchmark of Groww Nifty 50 Index Fund?">Benchmark</button>
+          <button class="chip" data-q="How do I download my capital gains statement?">Statement download</button>
+        </div>
+      </div>
+      <div class="menu__group">
+        <div class="menu__group-label">Schemes in scope</div>
+        <div class="menu__chips">
+          <button class="chip chip--scheme" data-q="What is the expense ratio of Groww Large Cap Fund?">Groww Large Cap</button>
+          <button class="chip chip--scheme" data-q="What is the expense ratio of Groww Value Fund?">Groww Value</button>
+          <button class="chip chip--scheme" data-q="What is the riskometer of Groww Small Cap Fund?">Groww Small Cap</button>
+          <button class="chip chip--scheme" data-q="What is the lock-in period of Groww ELSS Tax Saver Fund?">Groww ELSS</button>
+          <button class="chip chip--scheme" data-q="What is the benchmark of Groww Nifty 50 Index Fund?">Groww Nifty 50</button>
+          <button class="chip chip--scheme" data-q="What is the minimum SIP for Groww Liquid Fund?">Groww Liquid</button>
+          <button class="chip chip--scheme" data-q="What is the riskometer of Groww Overnight Fund?">Groww Overnight</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CONVERSATION TURNS ============ -->
+    <section class="turns" id="turns" aria-live="polite"></section>
+
+    <!-- ============ INPUT AREA ============ -->
+    <section class="input-area">
+      <form id="ask-form" autocomplete="off">
+        <div class="input-wrap">
+          <div class="autocomplete" id="autocomplete" role="listbox" aria-label="Scheme suggestions"></div>
+          <input
+            type="text"
+            id="ask-input"
+            class="input"
+            placeholder="Ask a factual question — e.g. expense ratio of Groww Large Cap"
+            aria-label="Ask a factual question"
+            autocomplete="off"
+            spellcheck="true">
+          <button type="submit" class="input-submit" id="ask-submit">Ask</button>
+        </div>
+      </form>
+      <p class="disclaimer">Facts-only. No investment advice. Do not enter PAN, Aadhaar, OTP, email, phone, or account numbers.</p>
+    </section>
+
+    <!-- ============ FOOTER ============ -->
+    <footer class="footer">
+      Sources: growwmf.in · groww.in · investor.sebi.gov.in · sebi.gov.in · amfiindia.com
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

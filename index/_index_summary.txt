@@ -1,0 +1,5 @@
+Chunks: 3699
+Total chars in chunks: 1,771,994
+TF-IDF features: 63298
+Chunk size target: 600 chars, overlap 100
+Files: /home/z/my-project/download/index/chunks.jsonl, /home/z/my-project/download/index/tfidf_chunks.pkl

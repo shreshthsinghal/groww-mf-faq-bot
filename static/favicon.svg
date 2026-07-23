@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 16px favicon — simplified single path, still readable -->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 16 16"
+     fill="none"
+     stroke="currentColor"
+     stroke-width="1.5"
+     stroke-linecap="round"
+     stroke-linejoin="round">
+  <path d="
+    M 3 2
+    L 10 2
+    M 13 2
+    L 13 2
+    M 13 5
+    L 13 12
+    L 7 12
+    L 5 14
+    L 4 12
+    L 3 12
+    L 3 2
+    Z
+  " />
+  <path d="M 5 6 L 10 6" stroke-width="1" opacity="0.6" />
+  <path d="M 5 8 L 9 8" stroke-width="1" opacity="0.6" />
+</svg>

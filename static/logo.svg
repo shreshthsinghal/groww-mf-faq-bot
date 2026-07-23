@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Groww MF Facts — primary mark.
+
+  Gestalt principle: CLOSURE.
+  A single-weight stroke draws three sides of a folded-corner document.
+  The missing fourth side (top-right) and a small notch at the bottom-left
+  are left as negative space; the eye completes them into a chat-bubble tail.
+  Meaning: "a document is speaking."
+
+  Works at 16px (favicon) and 512px (app icon) without redrawing.
+  Single ink color; works in pure black on white or pure white on black.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 32 32"
+     fill="none"
+     stroke="currentColor"
+     stroke-width="2"
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     role="img"
+     aria-label="Groww MF Facts — a document in conversation">
+
+  <!--
+    Path: starts at top-left corner, goes right (top edge),
+    STOPS before reaching the top-right corner (closure — viewer completes top-right),
+    NO right edge drawn (closure — viewer completes right side),
+    bottom edge drawn with a fold-corner cut at bottom-right,
+    bottom edge continues left, with a notch (the chat-bubble tail) at bottom-left,
+    then up the left edge back to top-left.
+  -->
+  <path d="
+    M 6 4
+    L 19 4
+    M 26 4
+    L 26 4
+    M 26 11
+    L 26 24
+    L 13 24
+    L 10 28
+    L 8 24
+    L 6 24
+    L 6 4
+    Z
+  " />
+
+  <!--
+    Three thin "text lines" inside the document —
+    they reinforce "document with content," not just an empty shape.
+    Each is shorter than the last, like text lines tapering.
+  -->
+  <path d="M 10 11 L 22 11" stroke-width="1.5" opacity="0.55" />
+  <path d="M 10 15 L 19 15" stroke-width="1.5" opacity="0.55" />
+  <path d="M 10 19 L 16 19" stroke-width="1.5" opacity="0.55" />
+</svg>
