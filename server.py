@@ -1,10 +1,5 @@
 """
 Flask server for Groww MF FAQ bot.
-
-Endpoints:
-  GET  /             -> serves the chat UI
-  POST /api/answer   -> JSON {query: str} -> JSON result from GrowwMFChatbot.answer()
-  GET  /health       -> health check
 """
 import os
 from pathlib import Path
@@ -69,21 +64,14 @@ def health():
     }), 200
 
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5050))
-    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
-
-
 @app.route("/api/llm-test")
 def llm_test():
-    """Test LLM connectivity."""
-    import os, urllib.request, json as _json
+    """Test LLM connectivity from the server."""
     try:
         from chatbot_engine import _call_zai_chat, _load_zai_config
         cfg = _load_zai_config()
-        # Test a simple call
         resp = _call_zai_chat("You are a test bot.", "Say OK", timeout=15)
-        return _jsonify({
+        return jsonify({
             "config_loaded": True,
             "base_url": cfg.get("baseUrl"),
             "has_token": bool(cfg.get("token")),
@@ -91,8 +79,9 @@ def llm_test():
             "llm_works": bool(resp),
         })
     except Exception as e:
-        return _jsonify({"error": str(e), "error_type": type(e).__name__}), 500
+        return jsonify({"error": str(e), "error_type": type(e).__name__}), 500
 
-def _jsonify(d, code=200):
-    from flask import jsonify as _fj
-    return _fj(d), code
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5050))
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
