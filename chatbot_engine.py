@@ -505,11 +505,15 @@ class GrowwMFChatbot:
             fact_bonus = sum(2 for t in fact_terms_in_query if t in text_lower)
             scheme_bonus = sum(1 for s in scheme_names_in_query
                                if s in text_lower or s in page_meta)
-            # Combined: TF-IDF base + density + fact-term + scheme-name boost
+            # Extra boost if chunk has the fact term AND a value (NIL, %, Rs, years)
+            has_value = bool(re.search(r'(nil|\d+\.?\d*\s*%|rs\.?\s*\d+|₹\s*\d+|\d+\s*year)', text_lower))
+            value_boost = 0.3 if (fact_bonus > 0 and has_value) else 0
+            # Combined: TF-IDF base + density + fact-term + scheme-name + value boost
             combined = (scores[ix]
                         + 0.02 * overlap
-                        + 0.08 * fact_bonus
-                        + 0.04 * scheme_bonus)
+                        + 0.25 * fact_bonus
+                        + 0.04 * scheme_bonus
+                        + value_boost)
             reranked.append((combined, ix))
         reranked.sort(key=lambda x: -x[0])
 
