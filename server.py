@@ -69,6 +69,35 @@ def health():
     }), 200
 
 
+@app.route("/api/debug")
+def debug():
+    """Debug endpoint to test fact extraction."""
+    import os
+    try:
+        from fact_extractor import extract_fact
+        # Test with a sample query
+        query = "What is the expense ratio of Groww Large Cap Fund?"
+        retrieved = bot.retrieve(query, top_k=5)
+        intent = bot.classify_intent(query)
+
+        # Get the top chunk text for debugging
+        top_chunk_text = retrieved[0]["text"][:300] if retrieved else "none"
+
+        # Try extraction
+        extracted = extract_fact(intent, query, retrieved)
+
+        return jsonify({
+            "query": query,
+            "intent": intent,
+            "top_chunk_preview": top_chunk_text,
+            "extracted_result": extracted,
+            "n_retrieved": len(retrieved),
+            "fact_extractor_loaded": True,
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e), "fact_extractor_loaded": False}), 500
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5050))
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
