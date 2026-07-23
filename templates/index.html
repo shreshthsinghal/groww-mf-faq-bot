@@ -3,100 +3,216 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Groww MF Facts - sourced answers, no advice</title>
+  <title>Groww MF Facts - Sourced answers, no advice</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <div class="app">
 
-    <!-- Header -->
-    <header class="header">
-      <img src="/static/logo.svg" alt="" class="header__logo" aria-hidden="true">
-      <div class="header__title">Groww MF Facts</div>
-    </header>
+  <!-- Custom cursor -->
+  <div class="cursor-dot" id="cursor"></div>
 
-    <!-- Intro -->
-    <section class="intro">
-      <h1 class="intro__lede">Factual answers about Groww mutual fund schemes.</h1>
-      <p class="intro__sub">Every answer comes from an official public source. No advice, no performance figures, no opinions.</p>
-    </section>
+  <!-- Scroll progress -->
+  <div class="scroll-progress"><div class="scroll-progress__bar" id="scrollBar"></div></div>
 
-    <!-- Menu: fact types (verbs) + schemes (nouns) -->
-    <section class="menu">
-      <div class="menu__group">
-        <div class="menu__label">What you can ask</div>
-        <div class="menu__chips">
-          <button class="chip chip--fact" data-q="What is the expense ratio of Groww Large Cap Fund?">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><text x="3" y="12" font-size="11" font-family="sans-serif" fill="currentColor" stroke="none">%</text></svg>
-            Expense ratio
-          </button>
-          <button class="chip chip--fact" data-q="What is the exit load of Groww ELSS Tax Saver Fund?">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2 L3 14 M3 2 L11 2 L9 5 L11 8 L3 8"/></svg>
-            Exit load
-          </button>
-          <button class="chip chip--fact" data-q="What is the minimum SIP for Groww Liquid Fund?">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5 L13 5 M3 9 L13 9 M3 13 L13 13"/></svg>
-            Minimum SIP
-          </button>
-          <button class="chip chip--fact" data-q="What is the lock-in period of Groww ELSS Tax Saver Fund?">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="7" width="8" height="6" rx="1"/><path d="M5.5 7 L5.5 5 a2.5 2.5 0 0 1 5 0 L10.5 7"/></svg>
-            ELSS lock-in
-          </button>
-          <button class="chip chip--fact" data-q="What is the riskometer of Groww Small Cap Fund?">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13 a6 6 0 0 1 12 0"/><line x1="8" y1="13" x2="11" y2="8"/></svg>
-            Riskometer
-          </button>
-          <button class="chip chip--fact" data-q="What is the benchmark of Groww Nifty 50 Index Fund?">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2"/><line x1="8" y1="1" x2="8" y2="4"/><line x1="8" y1="12" x2="8" y2="15"/></svg>
-            Benchmark
-          </button>
-          <button class="chip chip--fact" data-q="How do I download my capital gains statement?">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2 L8 11 M4 8 L8 12 L12 8 M3 14 L13 14"/></svg>
-            Statement download
-          </button>
-        </div>
-      </div>
-      <div class="menu__group">
-        <div class="menu__label">Schemes in scope</div>
-        <div class="menu__chips">
-          <button class="chip chip--scheme" data-q="What is the expense ratio of Groww Large Cap Fund?">Groww Large Cap</button>
-          <button class="chip chip--scheme" data-q="What is the expense ratio of Groww Value Fund?">Groww Value</button>
-          <button class="chip chip--scheme" data-q="What is the riskometer of Groww Small Cap Fund?">Groww Small Cap</button>
-          <button class="chip chip--scheme" data-q="What is the lock-in period of Groww ELSS Tax Saver Fund?">Groww ELSS</button>
-          <button class="chip chip--scheme" data-q="What is the benchmark of Groww Nifty 50 Index Fund?">Groww Nifty 50</button>
-          <button class="chip chip--scheme" data-q="What is the minimum SIP for Groww Liquid Fund?">Groww Liquid</button>
-          <button class="chip chip--scheme" data-q="What is the riskometer of Groww Overnight Fund?">Groww Overnight</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Conversation turns -->
-    <section class="turns" id="turns" aria-live="polite"></section>
-
-    <!-- Input -->
-    <section class="input-area">
-      <form id="ask-form" autocomplete="off">
-        <div class="input-wrap">
-          <div class="autocomplete" id="autocomplete" role="listbox" aria-label="Scheme suggestions"></div>
-          <input
-            type="text"
-            id="ask-input"
-            class="input"
-            placeholder="Ask a factual question..."
-            aria-label="Ask a factual question"
-            autocomplete="off"
-            spellcheck="true">
-          <button type="submit" class="input-submit" id="ask-submit">Ask</button>
-        </div>
-      </form>
-      <p class="disclaimer">Facts-only. No investment advice. Do not enter PAN, Aadhaar, OTP, email, phone, or account numbers.</p>
-    </section>
-
-    <footer class="footer">
-      Sources: growwmf.in - groww.in - investor.sebi.gov.in - sebi.gov.in - amfiindia.com
-    </footer>
+  <!-- Logo intro animation -->
+  <div class="logo-intro" id="logoIntro">
+    <div class="logo-intro__glow"></div>
+    <svg class="logo-intro__svg" viewBox="0 0 80 80" fill="none">
+      <path class="path1" d="M12 8 L52 8 Q60 8 60 16 L60 48 Q60 56 52 56 L28 56 L20 64 L22 56 L12 56 Q4 56 4 48 L4 16 Q4 8 12 8 Z"/>
+      <line class="path2" x1="16" y1="20" x2="48" y2="20" stroke-width="2"/>
+      <line class="path3" x1="16" y1="30" x2="42" y2="30" stroke-width="2"/>
+      <line class="path4" x1="16" y1="40" x2="38" y2="40" stroke-width="2"/>
+      <circle cx="54" cy="14" r="4" fill="#FF6B6B" stroke="none" class="path4"/>
+    </svg>
+    <div class="logo-intro__text" id="logoText">Groww MF Facts</div>
   </div>
+
+  <!-- Navigation -->
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="#" class="nav__brand">
+        <svg class="nav__logo" viewBox="0 0 32 32" fill="none">
+          <path d="M5 4 L21 4 Q26 4 26 9 L26 21 Q26 26 21 26 L12 26 L8 30 L9 26 L5 26 Q0 26 0 21 L0 9 Q0 4 5 4 Z" stroke="currentColor" stroke-width="2"/>
+          <line x1="6" y1="11" x2="20" y2="11" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="6" y1="16" x2="18" y2="16" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="6" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        <span class="nav__name">Groww MF Facts</span>
+      </a>
+      <div class="nav__links">
+        <a href="#how" class="nav__link">How It Works</a>
+        <a href="#chips" class="nav__link">What You Can Ask</a>
+        <a href="#features" class="nav__link">Why Us</a>
+        <a href="#safety" class="nav__link">Safety</a>
+      </div>
+      <button class="nav__cta" onclick="document.getElementById('askInput').focus()">Start Asking</button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="hero__orbs">
+      <div class="hero__orb hero__orb--1"></div>
+      <div class="hero__orb hero__orb--2"></div>
+      <div class="hero__orb hero__orb--3"></div>
+    </div>
+    <div class="hero__spotlight" id="spotlight"></div>
+    <div class="hero__inner">
+      <h1 class="hero__headline">Factual answers about Groww mutual fund schemes.</h1>
+      <p class="hero__sub">Every answer comes from an official public source. No advice, no performance figures, no opinions - just verified facts.</p>
+      <div class="hero__badges">
+        <span class="badge"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="6" height="5" rx="0.5"/><path d="M4.5 5 L4.5 3.5 a1.5 1.5 0 0 1 3 0 L7.5 5"/></svg>No PII collected</span>
+        <span class="badge"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6 L5 9 L10 3"/></svg>Official sources only</span>
+        <span class="badge"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><line x1="6" y1="3.5" x2="6" y2="8.5"/><line x1="3.5" y1="6" x2="8.5" y2="6"/></svg>7 schemes covered</span>
+        <span class="badge"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><circle cx="6" cy="6" r="1.5"/></svg>Facts-only responses</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chips section -->
+  <section class="chips-section" id="chips">
+    <div class="chips-label">What you can ask</div>
+    <div class="chips-group" id="factChips">
+      <button class="chip" data-q="What is the expense ratio of Groww Large Cap Fund?"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><text x="3" y="12" font-size="11" fill="currentColor" stroke="none">%</text></svg>Expense ratio</button>
+      <button class="chip" data-q="What is the exit load of Groww ELSS Tax Saver Fund?"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2 L3 14 M3 2 L11 2 L9 5 L11 8 L3 8"/></svg>Exit load</button>
+      <button class="chip" data-q="What is the minimum SIP for Groww Liquid Fund?"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5 L13 5 M3 9 L13 9 M3 13 L13 13"/></svg>Minimum SIP</button>
+      <button class="chip" data-q="What is the lock-in period of Groww ELSS Tax Saver Fund?"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="7" width="8" height="6" rx="1"/><path d="M5.5 7 L5.5 5 a2.5 2.5 0 0 1 5 0 L10.5 7"/></svg>ELSS lock-in</button>
+      <button class="chip" data-q="What is the riskometer of Groww Small Cap Fund?"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13 a6 6 0 0 1 12 0"/><line x1="8" y1="13" x2="11" y2="8"/></svg>Riskometer</button>
+      <button class="chip" data-q="What is the benchmark of Groww Nifty 50 Index Fund?"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2"/></svg>Benchmark</button>
+      <button class="chip" data-q="How do I download my capital gains statement?"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2 L8 11 M4 8 L8 12 L12 8 M3 14 L13 14"/></svg>Statement download</button>
+    </div>
+    <div class="chips-label">Schemes in scope</div>
+    <div class="chips-group" id="schemeChips">
+      <button class="chip chip--scheme" data-q="What is the expense ratio of Groww Large Cap Fund?"><span class="dot dot--equity"></span>Groww Large Cap</button>
+      <button class="chip chip--scheme" data-q="What is the expense ratio of Groww Value Fund?"><span class="dot dot--equity"></span>Groww Value</button>
+      <button class="chip chip--scheme" data-q="What is the riskometer of Groww Small Cap Fund?"><span class="dot dot--equity"></span>Groww Small Cap</button>
+      <button class="chip chip--scheme" data-q="What is the lock-in period of Groww ELSS Tax Saver Fund?"><span class="dot dot--tax"></span>Groww ELSS</button>
+      <button class="chip chip--scheme" data-q="What is the benchmark of Groww Nifty 50 Index Fund?"><span class="dot dot--equity"></span>Groww Nifty 50</button>
+      <button class="chip chip--scheme" data-q="What is the minimum SIP for Groww Liquid Fund?"><span class="dot dot--debt"></span>Groww Liquid</button>
+      <button class="chip chip--scheme" data-q="What is the riskometer of Groww Overnight Fund?"><span class="dot dot--debt"></span>Groww Overnight</button>
+    </div>
+  </section>
+
+  <!-- Input -->
+  <section class="input-section" id="inputSection">
+    <form id="askForm" autocomplete="off">
+      <div class="input-wrap" id="inputWrap">
+        <input
+          type="text"
+          id="askInput"
+          class="input-field"
+          placeholder="Ask a factual question..."
+          aria-label="Ask a factual question about Groww mutual funds"
+          autocomplete="off"
+          spellcheck="true">
+        <button type="button" class="input-clear" id="clearBtn" aria-label="Clear input">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>
+        </button>
+        <button type="submit" class="input-submit" id="askSubmit">Ask</button>
+      </div>
+    </form>
+    <p class="input-hint">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to ask. Do not enter PAN, Aadhaar, OTP, email, phone, or account numbers.</p>
+  </section>
+
+  <!-- Conversation turns -->
+  <section class="turns" id="turns" aria-live="polite"></section>
+
+  <!-- How It Works -->
+  <section class="how-section" id="how">
+    <h2 class="section-title">How It Works</h2>
+    <div class="how-steps">
+      <div class="how-step" data-reveal>
+        <div class="how-step__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4 L16 4 Q20 4 20 8 L20 14 Q20 18 16 18 L10 18 L7 21 L8 18 L4 18 Q0 18 0 14 L0 8 Q0 4 4 4 Z"/><line x1="5" y1="9" x2="15" y2="9"/><line x1="5" y1="13" x2="12" y2="13"/></svg>
+        </div>
+        <h3 class="how-step__title">Ask</h3>
+        <p class="how-step__desc">Type any factual question about a Groww mutual fund scheme. Use the suggestion chips or type your own.</p>
+      </div>
+      <div class="how-step" data-reveal>
+        <div class="how-step__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2 L20 5 L20 12 Q20 18 12 22 Q4 18 4 12 L4 5 Z"/><path d="M8 12 L11 15 L16 9"/></svg>
+        </div>
+        <h3 class="how-step__title">Verify</h3>
+        <p class="how-step__desc">The AI retrieves answers from official public documents - Scheme Information Documents, AMFI data, and regulatory filings.</p>
+      </div>
+      <div class="how-step" data-reveal>
+        <div class="how-step__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>
+        </div>
+        <h3 class="how-step__title">Get Facts</h3>
+        <p class="how-step__desc">Receive a precise, sourced answer with direct references. Every response links back to the original document.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bento grid -->
+  <section class="bento-section" id="features">
+    <h2 class="section-title">Why Groww MF Facts</h2>
+    <div class="bento-grid">
+      <div class="bento-card bento-card--lg" data-reveal>
+        <svg class="bento-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="14" height="18" rx="1"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>
+        <h3 class="bento-card__title">Official Sources Only</h3>
+        <p class="bento-card__desc">Every answer is pulled from Scheme Information Documents, AMFI factsheets, and SEBI-mandated disclosures. Zero hallucination, zero guesswork.</p>
+      </div>
+      <div class="bento-card" data-reveal>
+        <svg class="bento-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="5" y1="5" x2="19" y2="19"/></svg>
+        <h3 class="bento-card__title">Zero Investment Advice</h3>
+        <p class="bento-card__desc">Factual information only. Never suggests buying, selling, or holding any fund.</p>
+      </div>
+      <div class="bento-card" data-reveal>
+        <svg class="bento-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><text x="9" y="16" font-size="12" fill="currentColor" stroke="none">7</text></svg>
+        <h3 class="bento-card__title">7 Schemes Covered</h3>
+        <p class="bento-card__desc">Large Cap, Value, Small Cap, ELSS, Nifty 50, Liquid, and Overnight funds.</p>
+      </div>
+      <div class="bento-card" data-reveal>
+        <svg class="bento-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2 L4 14 L11 14 L9 22 L20 10 L13 10 Z"/></svg>
+        <h3 class="bento-card__title">Instant Answers</h3>
+        <p class="bento-card__desc">Precise answers in seconds. No sign-up, no waiting, no friction.</p>
+      </div>
+      <div class="bento-card bento-card--lg" data-reveal>
+        <svg class="bento-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2 L20 5 L20 12 Q20 18 12 22 Q4 18 4 12 L4 5 Z"/><rect x="9" y="10" width="6" height="5" rx="0.5"/><path d="M10.5 10 L10.5 8 a1.5 1.5 0 0 1 3 0 L13.5 10"/></svg>
+        <h3 class="bento-card__title">Your Data Stays Safe</h3>
+        <p class="bento-card__desc">No personally identifiable information is collected or stored. No PAN, no Aadhaar, no OTPs, no email addresses, no phone numbers, no account details - ever. Your questions are ephemeral.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Safety section -->
+  <section class="safety-section" id="safety">
+    <div class="safety-inner">
+      <svg class="safety-shield" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M32 4 L52 12 L52 32 Q52 48 32 60 Q12 48 12 32 L12 12 Z"/>
+        <rect x="24" y="28" width="16" height="14" rx="1"/>
+        <path d="M27 28 L27 22 a5 5 0 0 1 10 0 L37 28"/>
+      </svg>
+      <h2 class="safety-title">Your Safety, Non-Negotiable</h2>
+      <p class="safety-desc">Groww MF Facts is designed to never see, collect, or store your personal data. Enter PAN, Aadhaar, OTP, email, phone, or account numbers and the system will not process them - it will ask you to rephrase.</p>
+      <div class="pii-badges">
+        <span class="pii-badge">PAN</span>
+        <span class="pii-badge">Aadhaar</span>
+        <span class="pii-badge">OTP</span>
+        <span class="pii-badge">Email</span>
+        <span class="pii-badge">Phone</span>
+        <span class="pii-badge">Account No.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer__brand">
+      <svg class="footer__logo" viewBox="0 0 32 32" fill="none"><path d="M5 4 L21 4 Q26 4 26 9 L26 21 Q26 26 21 26 L12 26 L8 30 L9 26 L5 26 Q0 26 0 21 L0 9 Q0 4 5 4 Z" stroke="currentColor" stroke-width="2"/></svg>
+      <span class="footer__name">Groww MF Facts</span>
+    </div>
+    <p class="footer__disclaimer">Facts-only tool. Not SEBI-registered investment advice. Not affiliated with Groww Inc. in an advisory capacity. For informational purposes only.</p>
+    <div class="footer__links">
+      <a href="#" class="footer__link">Privacy Policy</a>
+      <a href="#" class="footer__link">Terms of Use</a>
+      <a href="#" class="footer__link">Source Methodology</a>
+    </div>
+    <p class="footer__copy">Built with precision.</p>
+  </footer>
 
   <script src="/static/app.js"></script>
 </body>
