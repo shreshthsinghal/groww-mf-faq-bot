@@ -37,6 +37,7 @@ Output (dict):
 import os, re, json, pickle, subprocess, tempfile, time
 import urllib.request
 import urllib.error
+import urllib.parse
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -201,42 +202,138 @@ def _load_zai_config():
     }
 
 
-def _call_zai_chat(system_prompt: str, user_prompt: str, timeout: int = 45) -> str:
-    """Call Z.AI chat API via direct HTTP. Returns assistant message content."""
-    cfg = _load_zai_config()
-    url = f"{cfg['baseUrl']}/chat/completions"
+def _call_zai_chat(system_prompt: str, user_prompt: str, timeout: int = 30) -> str:
+    """Call LLM API. Tries OpenAI first, then Z.AI, then Groq as fallback.
+    OpenAI is the primary provider - works from Railway's US/EU servers.
+    """
+    # Provider 1: OpenAI (primary - works from Railway)
+    openai_result = _try_openai(system_prompt, user_prompt, timeout)
+    if openai_result:
+        return openai_result
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {cfg['apiKey']}",
-        "X-Z-AI-From": "Z",
-    }
-    if cfg.get("chatId"):
-        headers["X-Chat-Id"] = cfg["chatId"]
-    if cfg.get("userId"):
-        headers["X-User-Id"] = cfg["userId"]
-    if cfg.get("token"):
-        headers["X-Token"] = cfg["token"]
+    # Provider 2: Z.AI (fallback for local dev)
+    zai_result = _try_zai(system_prompt, user_prompt, timeout)
+    if zai_result:
+        return zai_result
 
-    body = json.dumps({
-        "model": "glm-4-plus",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-    }).encode("utf-8")
+    # Provider 3: Groq (if key set)
+    groq_result = _try_groq(system_prompt, user_prompt, timeout)
+    if groq_result:
+        return groq_result
 
-    req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    return ""
+
+
+def _try_openai(system_prompt, user_prompt, timeout):
+    """Try OpenAI API. Primary provider - works from Railway's US/EU servers."""
+    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    if not openai_key:
+        return ""
     try:
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {openai_key}",
+        }
+        body = json.dumps({
+            "model": "gpt-4o-mini",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "max_tokens": 200,
+            "temperature": 0.3,
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             return (data.get("choices", [{}])[0]
                     .get("message", {})
                     .get("content", "")
                     .strip())
-    except Exception as e:
-        import sys
-        print(f"[LLM ERROR] {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+    except Exception:
+        return ""
+
+
+def _try_zai(system_prompt, user_prompt, timeout):
+    """Try Z.AI API."""
+    try:
+        cfg = _load_zai_config()
+        url = f"{cfg['baseUrl']}/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {cfg['apiKey']}",
+            "X-Z-AI-From": "Z",
+        }
+        if cfg.get("chatId"):
+            headers["X-Chat-Id"] = cfg["chatId"]
+        if cfg.get("userId"):
+            headers["X-User-Id"] = cfg["userId"]
+        if cfg.get("token"):
+            headers["X-Token"] = cfg["token"]
+        body = json.dumps({
+            "model": "glm-4-plus",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return (data.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+                    .strip())
+    except Exception:
+        return ""
+
+
+def _try_groq(system_prompt, user_prompt, timeout):
+    """Try Groq API."""
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+    if not groq_key:
+        return ""
+    try:
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {groq_key}",
+        }
+        body = json.dumps({
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "max_tokens": 200,
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return (data.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+                    .strip())
+    except Exception:
+        return ""
+
+
+def _try_pollinations(system_prompt, user_prompt, timeout):
+    """Try Pollinations API (free, no key needed)."""
+    try:
+        # Combine system + user prompt into a single text prompt
+        combined = f"{system_prompt}\n\n{user_prompt}"
+        # URL-encode the prompt
+        encoded = urllib.parse.quote(combined)
+        url = f"https://text.pollinations.ai/{encoded}"
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "GrowwMFBot/1.0",
+            "Referer": "https://groww-mf-faq-bot.vercel.app",
+        })
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read().decode("utf-8").strip()
+    except Exception:
         return ""
 
 
