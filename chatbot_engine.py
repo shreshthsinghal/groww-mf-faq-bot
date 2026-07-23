@@ -40,8 +40,6 @@ import urllib.error
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-from fact_extractor import extract_fact
-
 IST = timezone(timedelta(hours=5, minutes=30))
 
 # ---------------------------------------------------------------------------
@@ -396,52 +394,53 @@ class GrowwMFChatbot:
 
     # ------------------- LLM call -------------------
     def llm_answer(self, query: str, retrieved: list, intent: str = ""):
-        """Generate answer. Tries fact extraction first, then LLM, then fallback."""
+        """Generate answer using LLM. Pure LLM-based, no regex fallback."""
         today = datetime.now(IST).strftime("%d %b %Y")
 
-        # Step 1: Try deterministic fact extraction (instant, can't hallucinate)
-        extracted = extract_fact(intent, query, retrieved)
-        if extracted:
-            return extracted + "\n\nLast updated from sources: " + today, \
-                   retrieved[0]["url"] if retrieved else None, \
-                   retrieved[0]["title"] if retrieved else None
-
-        # Step 2: Try LLM (may fail on hosted platforms due to API restrictions)
         def _clean(s):
             return (s or "").replace("\x00", " ").replace("\r", " ").strip()
 
+        # Use only top 3 chunks to keep context focused
+        top_chunks = retrieved[:3]
+
+        # Build concise context
         context_parts = []
-        for i, r in enumerate(retrieved, 1):
-            context_parts.append(
-                f"[Source {i}] {r['title']}\nURL: {r['url']}\nSource type: {r['type']}\n"
-                f"Content:\n{_clean(r['text'])}\n"
-            )
-        context = "\n---\n".join(context_parts)
+        for i, r in enumerate(top_chunks, 1):
+            # Truncate each chunk to ~800 chars to keep prompt focused
+            chunk_text = _clean(r["text"])[:800]
+            context_parts.append(f"[Source {i}] {r['title']}\n{chunk_text}")
+        context = "\n\n".join(context_parts)
         query_clean = _clean(query)
 
         system_prompt = (
-            "You are a facts-only FAQ assistant for Groww Mutual Fund schemes. "
-            "Answer in 1-3 sentences using ONLY the context. "
-            "Extract the specific fact. Do NOT repeat the context. "
-            f"End with: 'Last updated from sources: {today}'"
+            "You answer factual questions about Groww Mutual Fund schemes. "
+            "Rules:\n"
+            "1. Answer in 1 to 3 sentences only.\n"
+            "2. State the specific value asked for (e.g. 'The expense ratio is 2.42%').\n"
+            "3. Do NOT repeat the context. Do NOT include source URLs.\n"
+            "4. If the answer is not in the context, say: I couldn't find this in the available public sources.\n"
+            f"5. End every answer with this exact line: Last updated from sources: {today}"
         )
         user_prompt = (
-            f"User question: {query_clean}\n\n"
-            f"Context:\n\n{context}\n\n"
-            f"Answer in 1-3 sentences. End with: 'Last updated from sources: {today}'"
+            f"Question: {query_clean}\n\n"
+            f"Context:\n{context}\n\n"
+            f"Answer:"
         )
 
-        answer = _call_zai_chat(system_prompt, user_prompt, timeout=30)
+        answer = _call_zai_chat(system_prompt, user_prompt, timeout=45)
 
-        # Step 3: If LLM succeeded, use it
-        if answer and len(answer) < 500 and "Last updated" in answer:
+        # If LLM succeeded, use it
+        if answer:
+            # Ensure it has the Last updated line
+            if "Last updated from sources:" not in answer:
+                answer = answer.rstrip(".") + f".\n\nLast updated from sources: {today}"
             cit_url = retrieved[0]["url"] if retrieved else None
             cit_title = retrieved[0]["title"] if retrieved else None
             return answer, cit_url, cit_title
 
-        # Step 4: Fallback - first 2 sentences of top chunk
+        # Fallback only if LLM completely fails (network error etc)
         answer = self._fallback_answer(query, retrieved)
-        answer = answer + "\n\nLast updated from sources: " + today
+        answer = answer + f"\n\nLast updated from sources: {today}"
         cit_url = retrieved[0]["url"] if retrieved else None
         cit_title = retrieved[0]["title"] if retrieved else None
         return answer, cit_url, cit_title
