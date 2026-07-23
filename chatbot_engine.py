@@ -203,25 +203,64 @@ def _load_zai_config():
 
 
 def _call_zai_chat(system_prompt: str, user_prompt: str, timeout: int = 30) -> str:
-    """Call LLM API. Tries OpenAI first, then Z.AI, then Groq as fallback.
-    OpenAI is the primary provider - works from Railway's US/EU servers.
+    """Call LLM API. Tries OpenRouter first (free, no IP restrictions),
+    then OpenAI, then Z.AI, then Groq as fallbacks.
     """
-    # Provider 1: OpenAI (primary - works from Railway)
+    # Provider 1: OpenRouter (free, works from any IP, no credits needed)
+    openrouter_result = _try_openrouter(system_prompt, user_prompt, timeout)
+    if openrouter_result:
+        return openrouter_result
+
+    # Provider 2: OpenAI (if key set and has credits)
     openai_result = _try_openai(system_prompt, user_prompt, timeout)
     if openai_result:
         return openai_result
 
-    # Provider 2: Z.AI (fallback for local dev)
+    # Provider 3: Z.AI (fallback for local dev)
     zai_result = _try_zai(system_prompt, user_prompt, timeout)
     if zai_result:
         return zai_result
 
-    # Provider 3: Groq (if key set)
+    # Provider 4: Groq (if key set)
     groq_result = _try_groq(system_prompt, user_prompt, timeout)
     if groq_result:
         return groq_result
 
     return ""
+
+
+def _try_openrouter(system_prompt, user_prompt, timeout):
+    """Try OpenRouter API. Free models, works from any IP."""
+    openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not openrouter_key:
+        return ""
+    try:
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {openrouter_key}",
+            "HTTP-Referer": "https://groww-mf-faq-bot.vercel.app",
+            "X-Title": "Groww MF Facts Bot",
+        }
+        body = json.dumps({
+            "model": "nvidia/nemotron-3-super-120b-a12b:free",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "max_tokens": 200,
+            "temperature": 0.3,
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            content = (data.get("choices", [{}])[0]
+                       .get("message", {})
+                       .get("content", "")
+                       .strip())
+            return content if content else ""
+    except Exception:
+        return ""
 
 
 def _try_openai(system_prompt, user_prompt, timeout):

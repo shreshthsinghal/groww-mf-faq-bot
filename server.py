@@ -70,6 +70,28 @@ def llm_test():
     import urllib.request, urllib.error, json as _json, os
     results = {}
 
+    # Test OpenRouter
+    openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
+    results["openrouter_key_set"] = bool(openrouter_key)
+    if openrouter_key:
+        try:
+            url = "https://openrouter.ai/api/v1/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {openrouter_key}",
+                "HTTP-Referer": "https://groww-mf-faq-bot.vercel.app",
+                "X-Title": "Groww MF Facts Bot",
+            }
+            body = _json.dumps({"model": "nvidia/nemotron-3-super-120b-a12b:free", "messages": [{"role": "user", "content": "Say OK"}], "max_tokens": 20}).encode()
+            req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                data = _json.loads(resp.read().decode())
+                results["openrouter"] = "OK: " + data["choices"][0]["message"]["content"][:50]
+        except urllib.error.HTTPError as e:
+            results["openrouter"] = f"HTTPError {e.code}: {e.read().decode()[:100]}"
+        except Exception as e:
+            results["openrouter"] = f"Error: {type(e).__name__}: {e}"
+
     # Test OpenAI
     openai_key = os.environ.get("OPENAI_API_KEY", "")
     results["openai_key_set"] = bool(openai_key)
