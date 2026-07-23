@@ -35,6 +35,8 @@ Output (dict):
   }
 """
 import os, re, json, pickle, subprocess, tempfile, time
+import urllib.request
+import urllib.error
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -170,6 +172,71 @@ EXAMPLE_QUESTIONS = [
 ]
 
 FACTS_ONLY_NOTE = "Facts-only. No investment advice."
+
+
+# ---------------------------------------------------------------------------
+# Z.AI API client (direct HTTP, no subprocess)
+# ---------------------------------------------------------------------------
+def _load_zai_config():
+    """Load Z.AI config from .z-ai-config file or env vars."""
+    config_paths = [
+        Path.cwd() / ".z-ai-config",
+        Path.home() / ".z-ai-config",
+        Path("/etc/.z-ai-config"),
+    ]
+    for p in config_paths:
+        try:
+            with open(p) as f:
+                cfg = json.load(f)
+                if cfg.get("baseUrl") and cfg.get("apiKey"):
+                    return cfg
+        except (OSError, json.JSONDecodeError):
+            continue
+    return {
+        "baseUrl": os.environ.get("ZAI_BASE_URL", "https://internal-api.z.ai/v1"),
+        "apiKey": os.environ.get("ZAI_API_KEY", "Z.ai"),
+        "token": os.environ.get("ZAI_TOKEN", ""),
+        "chatId": os.environ.get("ZAI_CHAT_ID", ""),
+        "userId": os.environ.get("ZAI_USER_ID", ""),
+    }
+
+
+def _call_zai_chat(system_prompt: str, user_prompt: str, timeout: int = 45) -> str:
+    """Call Z.AI chat API via direct HTTP. Returns assistant message content."""
+    cfg = _load_zai_config()
+    url = f"{cfg['baseUrl']}/chat/completions"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {cfg['apiKey']}",
+        "X-Z-AI-From": "Z",
+    }
+    if cfg.get("chatId"):
+        headers["X-Chat-Id"] = cfg["chatId"]
+    if cfg.get("userId"):
+        headers["X-User-Id"] = cfg["userId"]
+    if cfg.get("token"):
+        headers["X-Token"] = cfg["token"]
+
+    body = json.dumps({
+        "model": "glm-4-plus",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    }).encode("utf-8")
+
+    req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return (data.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+                    .strip())
+    except Exception:
+        return ""
+
 
 # ---------------------------------------------------------------------------
 # Engine
@@ -327,10 +394,8 @@ class GrowwMFChatbot:
 
     # ------------------- LLM call -------------------
     def llm_answer(self, query: str, retrieved: list) -> tuple[str, str, str]:
-        """Call z-ai chat to generate answer. Returns (answer, citation_url, citation_title)."""
-        # Build context from retrieved chunks — STRIP null bytes (PDF extraction artifacts)
-        # because subprocess can't pass null bytes via command-line args.
-        def _clean(s: str) -> str:
+        """Call Z.AI chat API via direct HTTP. Returns (answer, citation_url, citation_title)."""
+        def _clean(s):
             return (s or "").replace("\x00", " ").replace("\r", " ").strip()
 
         context_parts = []
@@ -350,68 +415,30 @@ class GrowwMFChatbot:
             "1. Answer ONLY with facts from the provided context. Do NOT invent numbers or values.\n"
             "2. STRICT SENTENCE LIMIT: Maximum 3 sentences. Count periods. If you have 4+ sentences, rewrite.\n"
             "3. End every answer with a line EXACTLY formatted as: 'Last updated from sources: " + today + "'\n"
-            "4. If the context does not contain the answer (e.g., the specific number is not in the retrieved chunks), "
-            "say EXACTLY: 'I couldn't find this in the available public sources. Please check the official AMC page.' "
-            "Do NOT cite a source in that case, and do NOT add the 'Last updated' line.\n"
+            "4. If the context does not contain the answer, say EXACTLY: 'I couldn't find this in the available public sources. Please check the official AMC page.'\n"
             "5. Do NOT give investment advice, recommendations, or opinions.\n"
-            "6. Do NOT include the citation URL inside the answer body — it will be appended separately.\n"
+            "6. Do NOT include the citation URL inside the answer body.\n"
             "7. Be neutral, factual, and concise. Quote numbers directly from the context.\n"
-            "8. For expense ratio / exit load / minimum SIP / lock-in / riskometer / benchmark — if the value is in the context, state it as a plain fact.\n"
+            "8. For expense ratio / exit load / minimum SIP / lock-in / riskometer / benchmark, state the value as a plain fact.\n"
+            "9. Do NOT repeat the context. Extract only the specific fact asked for.\n"
         )
         user_prompt = (
             f"User question: {query_clean}\n\n"
             f"Retrieved context (most relevant first):\n\n{context}\n\n"
-            f"Answer the user's question using ONLY the context above. "
-            f"Follow all strict rules. Maximum 3 sentences. "
-            f"End with the line: 'Last updated from sources: {today}'"
+            f"Answer the user's question in 1-3 sentences using ONLY the context. "
+            f"Extract the specific fact. Do NOT repeat the context. "
+            f"End with: 'Last updated from sources: {today}'"
         )
 
-        # Call z-ai chat via subprocess
-        try:
-            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as tf:
-                tmp_path = tf.name
-            cmd = [
-                "z-ai", "chat",
-                "-p", user_prompt,
-                "-s", system_prompt,
-                "-o", tmp_path,
-            ]
-            if self.verbose:
-                print(f"[engine] calling z-ai chat (query={query!r})")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
-            if result.returncode != 0:
-                return (self._fallback_answer(query, retrieved) + "\n\nLast updated from sources: " + today,
-                        retrieved[0]["url"] if retrieved else None,
-                        retrieved[0]["title"] if retrieved else None)
-            with open(tmp_path) as f:
-                resp = json.load(f)
-            answer = (resp.get("choices", [{}])[0]
-                      .get("message", {}).get("content", "")).strip()
-            if not answer:
-                answer = self._fallback_answer(query, retrieved)
-            # Pick citation: top retrieved chunk
-            cit_url = retrieved[0]["url"] if retrieved else None
-            cit_title = retrieved[0]["title"] if retrieved else None
-            return answer, cit_url, cit_title
-        except subprocess.TimeoutExpired:
-            if self.verbose:
-                print("[engine] LLM call timed out — using fallback")
-            today = datetime.now(IST).strftime("%d %b %Y")
-            return (self._fallback_answer(query, retrieved) + "\n\nLast updated from sources: " + today,
-                    retrieved[0]["url"] if retrieved else None,
-                    retrieved[0]["title"] if retrieved else None)
-        except Exception as e:
-            if self.verbose:
-                print(f"[engine] LLM call failed: {e} — using fallback")
-            today = datetime.now(IST).strftime("%d %b %Y")
-            return (self._fallback_answer(query, retrieved) + "\n\nLast updated from sources: " + today,
-                    retrieved[0]["url"] if retrieved else None,
-                    retrieved[0]["title"] if retrieved else None)
-        finally:
-            try:
-                os.unlink(tmp_path)
-            except Exception:
-                pass
+        # Call Z.AI API via direct HTTP
+        answer = _call_zai_chat(system_prompt, user_prompt, timeout=45)
+        if not answer:
+            answer = self._fallback_answer(query, retrieved)
+            answer = answer + "\n\nLast updated from sources: " + today
+
+        cit_url = retrieved[0]["url"] if retrieved else None
+        cit_title = retrieved[0]["title"] if retrieved else None
+        return answer, cit_url, cit_title
 
     def _fallback_answer(self, query: str, retrieved: list) -> str:
         """If LLM fails, return the top retrieved chunk's first 2 sentences as the answer."""
