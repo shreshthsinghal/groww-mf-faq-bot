@@ -234,7 +234,9 @@ def _call_zai_chat(system_prompt: str, user_prompt: str, timeout: int = 45) -> s
                     .get("message", {})
                     .get("content", "")
                     .strip())
-    except Exception:
+    except Exception as e:
+        import sys
+        print(f"[LLM ERROR] {type(e).__name__}: {e}", file=sys.stderr, flush=True)
         return ""
 
 
