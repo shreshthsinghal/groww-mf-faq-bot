@@ -40,6 +40,8 @@ import urllib.error
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+from fact_extractor import extract_fact
+
 IST = timezone(timedelta(hours=5, minutes=30))
 
 # ---------------------------------------------------------------------------
@@ -393,8 +395,18 @@ class GrowwMFChatbot:
         return results
 
     # ------------------- LLM call -------------------
-    def llm_answer(self, query: str, retrieved: list) -> tuple[str, str, str]:
-        """Call Z.AI chat API via direct HTTP. Returns (answer, citation_url, citation_title)."""
+    def llm_answer(self, query: str, retrieved: list, intent: str = ""):
+        """Generate answer. Tries fact extraction first, then LLM, then fallback."""
+        today = datetime.now(IST).strftime("%d %b %Y")
+
+        # Step 1: Try deterministic fact extraction (instant, can't hallucinate)
+        extracted = extract_fact(intent, query, retrieved)
+        if extracted:
+            return extracted + "\n\nLast updated from sources: " + today, \
+                   retrieved[0]["url"] if retrieved else None, \
+                   retrieved[0]["title"] if retrieved else None
+
+        # Step 2: Try LLM (may fail on hosted platforms due to API restrictions)
         def _clean(s):
             return (s or "").replace("\x00", " ").replace("\r", " ").strip()
 
@@ -407,35 +419,29 @@ class GrowwMFChatbot:
         context = "\n---\n".join(context_parts)
         query_clean = _clean(query)
 
-        today = datetime.now(IST).strftime("%d %b %Y")
-
         system_prompt = (
-            "You are a facts-only FAQ assistant for Groww Mutual Fund schemes in India. "
-            "STRICT RULES:\n"
-            "1. Answer ONLY with facts from the provided context. Do NOT invent numbers or values.\n"
-            "2. STRICT SENTENCE LIMIT: Maximum 3 sentences. Count periods. If you have 4+ sentences, rewrite.\n"
-            "3. End every answer with a line EXACTLY formatted as: 'Last updated from sources: " + today + "'\n"
-            "4. If the context does not contain the answer, say EXACTLY: 'I couldn't find this in the available public sources. Please check the official AMC page.'\n"
-            "5. Do NOT give investment advice, recommendations, or opinions.\n"
-            "6. Do NOT include the citation URL inside the answer body.\n"
-            "7. Be neutral, factual, and concise. Quote numbers directly from the context.\n"
-            "8. For expense ratio / exit load / minimum SIP / lock-in / riskometer / benchmark, state the value as a plain fact.\n"
-            "9. Do NOT repeat the context. Extract only the specific fact asked for.\n"
+            "You are a facts-only FAQ assistant for Groww Mutual Fund schemes. "
+            "Answer in 1-3 sentences using ONLY the context. "
+            "Extract the specific fact. Do NOT repeat the context. "
+            f"End with: 'Last updated from sources: {today}'"
         )
         user_prompt = (
             f"User question: {query_clean}\n\n"
-            f"Retrieved context (most relevant first):\n\n{context}\n\n"
-            f"Answer the user's question in 1-3 sentences using ONLY the context. "
-            f"Extract the specific fact. Do NOT repeat the context. "
-            f"End with: 'Last updated from sources: {today}'"
+            f"Context:\n\n{context}\n\n"
+            f"Answer in 1-3 sentences. End with: 'Last updated from sources: {today}'"
         )
 
-        # Call Z.AI API via direct HTTP
-        answer = _call_zai_chat(system_prompt, user_prompt, timeout=45)
-        if not answer:
-            answer = self._fallback_answer(query, retrieved)
-            answer = answer + "\n\nLast updated from sources: " + today
+        answer = _call_zai_chat(system_prompt, user_prompt, timeout=30)
 
+        # Step 3: If LLM succeeded, use it
+        if answer and len(answer) < 500 and "Last updated" in answer:
+            cit_url = retrieved[0]["url"] if retrieved else None
+            cit_title = retrieved[0]["title"] if retrieved else None
+            return answer, cit_url, cit_title
+
+        # Step 4: Fallback - first 2 sentences of top chunk
+        answer = self._fallback_answer(query, retrieved)
+        answer = answer + "\n\nLast updated from sources: " + today
         cit_url = retrieved[0]["url"] if retrieved else None
         cit_title = retrieved[0]["title"] if retrieved else None
         return answer, cit_url, cit_title
@@ -538,7 +544,7 @@ class GrowwMFChatbot:
                 "route": "factual", "rule_triggered": "no_retrieval",
             }
 
-        answer, cit_url, cit_title = self.llm_answer(query, retrieved)
+        answer, cit_url, cit_title = self.llm_answer(query, retrieved, intent)
         return {
             "query": query, "intent": intent,
             "answer": answer,
