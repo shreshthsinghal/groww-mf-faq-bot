@@ -526,7 +526,7 @@ class GrowwMFChatbot:
             f"Answer:"
         )
 
-        answer = _call_zai_chat(system_prompt, user_prompt, timeout=45)
+        answer = _call_zai_chat(system_prompt, user_prompt, timeout=10)
 
         # If LLM succeeded, use it
         if answer:
