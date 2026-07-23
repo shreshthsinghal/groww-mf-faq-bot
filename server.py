@@ -98,6 +98,19 @@ def llm_test():
     # Test Groq
     groq_key = os.environ.get("GROQ_API_KEY", "")
     results["groq_key_set"] = bool(groq_key)
+    if groq_key:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {"Content-Type": "application/json", "Authorization": f"Bearer {groq_key}"}
+            body = _json.dumps({"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": "Say OK"}], "max_tokens": 5}).encode()
+            req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = _json.loads(resp.read().decode())
+                results["groq"] = "OK: " + data["choices"][0]["message"]["content"][:50]
+        except urllib.error.HTTPError as e:
+            results["groq"] = f"HTTPError {e.code}: {e.read().decode()[:100]}"
+        except Exception as e:
+            results["groq"] = f"Error: {type(e).__name__}: {e}"
 
     return jsonify(results)
 
