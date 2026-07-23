@@ -243,7 +243,7 @@ def _try_openrouter(system_prompt, user_prompt, timeout):
             "X-Title": "Groww MF Facts Bot",
         }
         body = json.dumps({
-            "model": "nvidia/nemotron-3-super-120b-a12b:free",
+            "model": "google/gemma-4-26b-a4b-it:free",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
