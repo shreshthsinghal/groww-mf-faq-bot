@@ -134,6 +134,20 @@ EDU_LINKS = {
     "sebi_mf_faq": "https://www.sebi.gov.in/sebi_data/faqfiles/sep-2024/1727242783639.pdf",
 }
 
+# Mapping from definitional intent to explainer page URL (for citation)
+DEFINE_CITATIONS = {
+    "define_expense_ratio": ("https://groww.in/p/expense-ratio", "Expense Ratio - Definition and Types", "Groww Topic Explainer"),
+    "define_exit_load": ("https://groww.in/p/exit-load-in-mutual-funds", "Exit Load in Mutual Funds", "Groww Topic Explainer"),
+    "define_sip": ("https://groww.in/p/sip-systematic-investment-plan", "SIP - Systematic Investment Plan", "Groww Topic Explainer"),
+    "define_lockin": ("https://groww.in/p/scheme-information-document", "Scheme Information Document (SID) - What is it", "Groww Topic Explainer"),
+    "define_riskometer": ("https://investor.sebi.gov.in/riskometer.html", "SEBI Investor - Understanding the Riskometer", "Regulator Explainer"),
+    "define_benchmark": ("https://groww.in/p/scheme-information-document", "Scheme Information Document (SID) - What is it", "Groww Topic Explainer"),
+    "define_elss": ("https://groww.in/mutual-funds/equity-funds/elss-funds", "ELSS Mutual Funds - What is ELSS Funds", "Groww Topic Explainer"),
+    "define_mutual_fund": ("https://groww.in/blog/what-are-mutual-funds", "What are Mutual Funds? Definitions, Types, Benefits", "Groww Blog"),
+    "define_nav": ("https://groww.in/p/scheme-information-document", "Scheme Information Document (SID) - What is it", "Groww Topic Explainer"),
+    "define_direct_regular": ("https://groww.in/blog/expense-ratio-different-regular-mutual-funds-direct-mutual-funds", "Difference in Expense Ratio Between Direct and Regular Mutual Funds", "Groww Blog"),
+}
+
 FACTSHEET_NOTE = "For scheme performance, please refer to the official factsheet PDF on the AMC website: https://www.growwmf.in/downloads/sid"
 
 PII_REFUSAL = (
@@ -668,6 +682,51 @@ class GrowwMFChatbot:
                 "citation_url": None, "citation_title": None,
                 "last_updated": None, "retrieved_chunk_ids": [],
                 "route": "out_of_scope", "rule_triggered": "classifier_oos",
+            }
+
+        # 3b. Definitional intent — retrieve from explainers + LLM
+        if intent.startswith("define_"):
+            # Retrieve from corpus (explainer pages are in the index)
+            retrieved = self.retrieve(query, top_k=5)
+            if not retrieved:
+                # Use the predefined citation even if retrieval fails
+                cit = DEFINE_CITATIONS.get(intent)
+                if cit:
+                    url, title, doctype = cit
+                    return {
+                        "query": query, "intent": intent,
+                        "answer": f"I can explain that, but let me point you to the official source for the full definition.\n\nLast updated from sources: {datetime.now(IST).strftime('%d %b %Y')}",
+                        "citation_url": url, "citation_title": title,
+                        "last_updated": datetime.now(IST).strftime("%d %b %Y"),
+                        "retrieved_chunk_ids": [],
+                        "route": "factual", "rule_triggered": None,
+                    }
+                return {
+                    "query": query, "intent": intent,
+                    "answer": "I can answer factual questions about Groww mutual fund schemes. For general definitions, please check the official explainer pages.",
+                    "citation_url": None, "citation_title": None,
+                    "last_updated": datetime.now(IST).strftime("%d %b %Y"),
+                    "retrieved_chunk_ids": [],
+                    "route": "out_of_scope", "rule_triggered": None,
+                }
+
+            # Use LLM to generate a definition from retrieved explainer chunks
+            answer, cit_url, cit_title = self.llm_answer(query, retrieved, intent)
+
+            # Always use the predefined explainer citation for definitional queries
+            # (more reliable than the retrieved chunk's URL which may be from a different page)
+            cit = DEFINE_CITATIONS.get(intent)
+            if cit:
+                cit_url, cit_title, _ = cit
+
+            return {
+                "query": query, "intent": intent,
+                "answer": answer,
+                "citation_url": cit_url,
+                "citation_title": cit_title,
+                "last_updated": datetime.now(IST).strftime("%d %b %Y"),
+                "retrieved_chunk_ids": [r["chunk_id"] for r in retrieved],
+                "route": "factual", "rule_triggered": None,
             }
 
         # 4. Factual intent — retrieve + LLM

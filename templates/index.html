@@ -102,8 +102,8 @@
           type="text"
           id="askInput"
           class="input-field"
-          placeholder="Ask a factual question..."
-          aria-label="Ask a factual question about Groww mutual funds"
+          placeholder="Ask anything about Groww mutual funds..."
+          aria-label="Ask a question about Groww mutual funds"
           autocomplete="off"
           spellcheck="true">
         <button type="button" class="input-clear" id="clearBtn" aria-label="Clear input">
@@ -112,7 +112,10 @@
         <button type="submit" class="input-submit" id="askSubmit">Ask</button>
       </div>
     </form>
-    <p class="input-hint">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to ask. Do not enter PAN, Aadhaar, OTP, email, phone, or account numbers.</p>
+    <div class="input-warnings">
+      <p class="input-hint">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to ask</p>
+      <p class="pii-warning"><strong>Never enter:</strong> PAN, Aadhaar, OTP, email, phone, or account numbers. This tool does not need them.</p>
+    </div>
   </section>
 
   <!-- Conversation turns -->

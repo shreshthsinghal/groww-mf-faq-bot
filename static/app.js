@@ -142,9 +142,10 @@
     if (!reduceMotion) {
       const placeholders = [
         'What is the expense ratio of Groww Large Cap?',
-        'Does Groww ELSS have a lock-in period?',
-        'What is the minimum SIP for Groww Value?',
-        'Show me Groww Nifty 50 benchmark...'
+        'What does lock-in period mean?',
+        'How much do I need to start a SIP?',
+        'What is a riskometer?',
+        'How do I download my statement?'
       ];
       let pIdx = 0, cIdx = 0, typing = true;
       function cyclePlaceholder() {
