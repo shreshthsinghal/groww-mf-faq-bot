@@ -262,7 +262,7 @@ def _try_openrouter(system_prompt, user_prompt, timeout):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "max_tokens": 500,
+            "max_tokens": 250,
             "temperature": 0.3,
         }).encode("utf-8")
         req = urllib.request.Request(url, data=body, headers=headers, method="POST")
@@ -294,7 +294,7 @@ def _try_openai(system_prompt, user_prompt, timeout):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "max_tokens": 500,
+            "max_tokens": 250,
             "temperature": 0.3,
         }).encode("utf-8")
         req = urllib.request.Request(url, data=body, headers=headers, method="POST")
@@ -359,7 +359,7 @@ def _try_groq(system_prompt, user_prompt, timeout):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "max_tokens": 500,
+            "max_tokens": 250,
         }).encode("utf-8")
         req = urllib.request.Request(url, data=body, headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -391,11 +391,58 @@ def _try_pollinations(system_prompt, user_prompt, timeout):
 
 
 # ---------------------------------------------------------------------------
+# Pre-written definitional answers (instant, no LLM call)
+# ---------------------------------------------------------------------------
+PREWRITTEN_ANSWERS = {
+    "define_expense_ratio": (
+        "Expense ratio is the annual fee charged by a mutual fund to manage your investment, expressed as a percentage of the fund's assets. It covers fund management, administration, and operating costs. A lower expense ratio means more of your money stays invested. Direct plans typically have lower expense ratios than regular plans because they don't include distributor commissions."
+    ),
+    "define_exit_load": (
+        "Exit load is a fee charged when you withdraw (redeem) your mutual fund units within a specific period from the date of investment. For example, a 1% exit load within 7 days means if you withdraw early, 1% of the redeemed amount is deducted. After the exit load period ends, no fee is charged. Not all funds have exit loads - check the scheme document."
+    ),
+    "define_sip": (
+        "SIP (Systematic Investment Plan) is a method of investing a fixed amount in a mutual fund at regular intervals - typically monthly. Instead of investing a lump sum all at once, you spread your investments over time, which helps reduce the impact of market volatility. SIPs start from as low as Rs. 100 per month and can be set up to run automatically from your bank account."
+    ),
+    "define_lockin": (
+        "Lock-in period is a mandatory timeframe during which you cannot withdraw your investment from a mutual fund. ELSS (tax saver) funds have a 3-year lock-in - the shortest among all Section 80C tax-saving options. Other mutual funds (large cap, small cap, debt) typically have no lock-in, though some may charge an exit load for early withdrawal."
+    ),
+    "define_riskometer": (
+        "Riskometer is a visual risk indicator that shows the risk level of a mutual fund scheme, mandated by SEBI. It uses 6 levels: Low Risk, Low to Moderate Risk, Moderate Risk, Moderately High Risk, High Risk, and Very High Risk. The level reflects how much your principal could fluctuate. Small cap funds are typically Very High Risk; liquid funds are Low Risk."
+    ),
+    "define_benchmark": (
+        "A benchmark is a standard market index (like Nifty 50 or Nifty 500) that a mutual fund's performance is compared against. For example, a large cap fund benchmarked against Nifty 50 TRI aims to match or exceed that index's returns. The benchmark helps you evaluate whether the fund is performing as expected relative to the broader market."
+    ),
+    "define_elss": (
+        "ELSS (Equity Linked Savings Scheme) is a type of mutual fund that invests primarily in equity stocks and offers tax deduction under Section 80C of the Income Tax Act. You can claim up to Rs. 1.5 lakh in tax deductions per year. ELSS has a mandatory 3-year lock-in period - the shortest lock-in among all 80C investment options."
+    ),
+    "define_mutual_fund": (
+        "A mutual fund is an investment vehicle that pools money from many investors to buy a portfolio of stocks, bonds, or other securities, managed by professional fund managers. Each investor owns units representing a portion of the portfolio. Mutual funds offer diversification, professional management, and liquidity. Returns depend on the performance of the underlying securities."
+    ),
+    "define_nav": (
+        "NAV (Net Asset Value) is the per-unit price of a mutual fund, calculated as the total value of the fund's assets minus liabilities divided by the number of units outstanding. NAV changes daily based on the market value of the fund's holdings. You buy and sell mutual fund units at the current NAV."
+    ),
+    "define_direct_regular": (
+        "Direct plans are bought directly from the mutual fund company (AMC) without a distributor, so they have lower expense ratios because no commission is paid. Regular plans are bought through a distributor or broker who earns a commission, which is included in the expense ratio. Both plans invest in the same portfolio - the only difference is the fee structure."
+    ),
+}
+
+
+# ---------------------------------------------------------------------------
 # Engine
 # ---------------------------------------------------------------------------
 class GrowwMFChatbot:
+    _instance = None  # singleton
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
     def __init__(self, verbose=False):
         self.verbose = verbose
+        # Answer cache: query -> result dict (instant repeat responses)
+        self._cache = {}
         # Load intent classifier artifacts
         with open(INTENT_MODEL_PATH, "rb") as f:
             self.clf = pickle.load(f)
@@ -581,7 +628,7 @@ class GrowwMFChatbot:
             f"Give a complete, helpful answer (2-3 sentences):"
         )
 
-        answer = _call_zai_chat(system_prompt, user_prompt, timeout=30)
+        answer = _call_zai_chat(system_prompt, user_prompt, timeout=15)
 
         # If LLM succeeded, use it
         if answer:
@@ -621,6 +668,20 @@ class GrowwMFChatbot:
                 "route": "out_of_scope", "rule_triggered": "empty_input",
             }
 
+        # 0. CACHE CHECK - instant response for repeat queries
+        cache_key = query.lower().strip()
+        if cache_key in self._cache:
+            cached = self._cache[cache_key]
+            # Return a fresh copy with the original query
+            return {**cached, "query": query, "cached": True}
+
+        result = self._compute_answer(query)
+        # Cache successful results (not errors)
+        if result.get("route") in ("factual", "refusal", "out_of_scope"):
+            self._cache[cache_key] = {**result, "query": cache_key}
+        return result
+
+    def _compute_answer(self, query: str) -> dict:
         # 1a. PII hard rule
         pii_type, pii_match = self.detect_pii(query)
         if pii_type:
@@ -638,7 +699,7 @@ class GrowwMFChatbot:
                 "query": query, "intent": "refusal_performance",
                 "answer": PERFORMANCE_REFUSAL,
                 "citation_url": "https://www.growwmf.in/downloads/sid",
-                "citation_title": "Groww MF — Official SID/Factsheet Downloads",
+                "citation_title": "Groww MF - Official SID/Factsheet Downloads",
                 "last_updated": datetime.now(IST).strftime("%d %b %Y"),
                 "retrieved_chunk_ids": [],
                 "route": "refusal", "rule_triggered": "performance_keywords",
@@ -685,49 +746,45 @@ class GrowwMFChatbot:
                 "route": "out_of_scope", "rule_triggered": "classifier_oos",
             }
 
-        # 3b. Definitional intent — retrieve from explainers + LLM
+        # 3b. Definitional intent — use pre-written answers (instant, no LLM)
         if intent.startswith("define_"):
-            # Retrieve from corpus (explainer pages are in the index)
-            retrieved = self.retrieve(query, top_k=5)
-            if not retrieved:
-                # Use the predefined citation even if retrieval fails
-                cit = DEFINE_CITATIONS.get(intent)
-                if cit:
-                    url, title, doctype = cit
-                    return {
-                        "query": query, "intent": intent,
-                        "answer": f"I can explain that, but let me point you to the official source for the full definition.\n\nLast updated from sources: {datetime.now(IST).strftime('%d %b %Y')}",
-                        "citation_url": url, "citation_title": title,
-                        "last_updated": datetime.now(IST).strftime("%d %b %Y"),
-                        "retrieved_chunk_ids": [],
-                        "route": "factual", "rule_triggered": None,
-                    }
+            prewritten = PREWRITTEN_ANSWERS.get(intent)
+            cit = DEFINE_CITATIONS.get(intent)
+            today = datetime.now(IST).strftime("%d %b %Y")
+            if prewritten and cit:
+                url, title, _ = cit
+                answer = prewritten + f"\n\nLast updated from sources: {today}"
                 return {
                     "query": query, "intent": intent,
-                    "answer": "I can answer factual questions about Groww mutual fund schemes. For general definitions, please check the official explainer pages.",
-                    "citation_url": None, "citation_title": None,
-                    "last_updated": datetime.now(IST).strftime("%d %b %Y"),
+                    "answer": answer,
+                    "citation_url": url,
+                    "citation_title": title,
+                    "last_updated": today,
                     "retrieved_chunk_ids": [],
-                    "route": "out_of_scope", "rule_triggered": None,
+                    "route": "factual", "rule_triggered": "prewritten",
                 }
-
-            # Use LLM to generate a definition from retrieved explainer chunks
-            answer, cit_url, cit_title = self.llm_answer(query, retrieved, intent)
-
-            # Always use the predefined explainer citation for definitional queries
-            # (more reliable than the retrieved chunk's URL which may be from a different page)
-            cit = DEFINE_CITATIONS.get(intent)
-            if cit:
-                cit_url, cit_title, _ = cit
-
+            # Fallback to LLM if no pre-written answer
+            retrieved = self.retrieve(query, top_k=5)
+            if retrieved:
+                answer, cit_url, cit_title = self.llm_answer(query, retrieved, intent)
+                if cit:
+                    cit_url, cit_title, _ = cit
+                return {
+                    "query": query, "intent": intent,
+                    "answer": answer,
+                    "citation_url": cit_url,
+                    "citation_title": cit_title,
+                    "last_updated": today,
+                    "retrieved_chunk_ids": [r["chunk_id"] for r in retrieved],
+                    "route": "factual", "rule_triggered": None,
+                }
             return {
                 "query": query, "intent": intent,
-                "answer": answer,
-                "citation_url": cit_url,
-                "citation_title": cit_title,
-                "last_updated": datetime.now(IST).strftime("%d %b %Y"),
-                "retrieved_chunk_ids": [r["chunk_id"] for r in retrieved],
-                "route": "factual", "rule_triggered": None,
+                "answer": "I can answer factual questions about Groww mutual fund schemes. Please ask about a specific scheme or fact.",
+                "citation_url": None, "citation_title": None,
+                "last_updated": today,
+                "retrieved_chunk_ids": [],
+                "route": "out_of_scope", "rule_triggered": None,
             }
 
         # 4. Factual intent — retrieve + LLM
