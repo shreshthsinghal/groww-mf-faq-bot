@@ -262,7 +262,7 @@ def _try_openrouter(system_prompt, user_prompt, timeout):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "max_tokens": 200,
+            "max_tokens": 500,
             "temperature": 0.3,
         }).encode("utf-8")
         req = urllib.request.Request(url, data=body, headers=headers, method="POST")
@@ -294,7 +294,7 @@ def _try_openai(system_prompt, user_prompt, timeout):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "max_tokens": 200,
+            "max_tokens": 500,
             "temperature": 0.3,
         }).encode("utf-8")
         req = urllib.request.Request(url, data=body, headers=headers, method="POST")
@@ -359,7 +359,7 @@ def _try_groq(system_prompt, user_prompt, timeout):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "max_tokens": 200,
+            "max_tokens": 500,
         }).encode("utf-8")
         req = urllib.request.Request(url, data=body, headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -569,18 +569,19 @@ class GrowwMFChatbot:
         query_clean = _clean(query)
 
         system_prompt = (
-            "Answer the question directly. Do NOT show your reasoning or thought process. "
-            "Do NOT mention 'according to context' or 'source says'. "
-            "Just state the fact in 1-3 sentences. "
-            f"End with: Last updated from sources: {today}"
+            "You are a helpful mutual fund facts assistant. Answer the user's question using the provided context. "
+            "Give a complete, informative answer in 2-3 sentences. Include the specific value AND a brief explanation of what it means. "
+            "Do NOT show reasoning. Do NOT mention 'according to context'. "
+            "Be helpful and educational - explain the fact clearly for someone who may be new to mutual funds. "
+            f"End every answer with this exact line: Last updated from sources: {today}"
         )
         user_prompt = (
             f"Question: {query_clean}\n\n"
             f"Context:\n{context}\n\n"
-            f"Give the direct answer (no reasoning):"
+            f"Give a complete, helpful answer (2-3 sentences):"
         )
 
-        answer = _call_zai_chat(system_prompt, user_prompt, timeout=10)
+        answer = _call_zai_chat(system_prompt, user_prompt, timeout=30)
 
         # If LLM succeeded, use it
         if answer:
